@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Signup Page</title>
+    <script src="https://cdn.rawgit.com/mladenilic/pwd_toggle/d5db69ce/dist/pwd_toggle.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='signup.css') }}">
+  </head>
+  <body  class="banner" style="background-image: url('static/bg.jpg')">
+    <div class="container">
+      {% if error %}  
+      <p class="error"><strong>Error</strong>: {{error}}</p>  
+  {% endif %}  
+      <form action="/register" class="form" method="post">
+        <h2>Be A Member</h2>
+        <div class="form-elements">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter username"
+            required
+          />
+        </div>
+
+        <div class="form-elements">
+          <label for="password">Password</label>
+          <input
+          onchange='checkPasswordLength(this.value)'
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter password"
+            onkeyup="check()"
+            required
+          />
+        </div>
+
+        <span id="errorSpan" style="color:red;"></span>
+
+        <div class="form-elements">
+          <label for="password" style="margin-top: 13px;">Confirm password</label>
+          <input
+            type="password"
+            id="checkPassword"
+            name="password"
+            placeholder="Enter password again"
+            onkeyup="check()"
+            required
+          />
+        </div>
+        
+        <p id="alertPassword"></p>
+
+        <button id="signupbtn" type="submit" >Signup</button>
+      </form>
+    </div>
+
+    <script src="{{url_for('static', filename='script.js')}}"></script>
+  </body>
+</html>

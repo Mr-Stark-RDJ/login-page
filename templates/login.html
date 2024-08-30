@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login Form Redirection to Home Page</title>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='login.css') }}">
+  </head>
+  <body class="banner" style="background-image: url('static/bg.jpg')">
+    <div class="container">
+      {% if error %}  
+      <p class="error"><strong>Error</strong>: {{error}}</p>  
+  {% endif %}  
+      <form action="/login" class="form" method="post">
+        <h2>Enter to the House</h2>
+        <div class="form-elements">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="Enter username"
+            name="username"
+            required
+          />
+        </div>
+
+        <div class="form-elements">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter password"
+            name="password"
+            required
+          />
+        </div>
+
+        <button type="submit">Login</button>
+      </form>
+    </div>
+
+    <!-- <script src="./script.js"></script> -->
+  </body>
+</html>

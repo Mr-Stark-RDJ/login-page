@@ -1,62 +1,91 @@
-from flask import *
-from flask_bcrypt import Bcrypt
-import os
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
+import requests
 
 app = Flask(__name__)
-bcrypt = Bcrypt(app)
+app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"
 
-userData = {}
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-@app.route('/')
-def index():
-  return render_template('index.html')
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    balance = db.Column(db.Float, default=0.0)
 
+    def __init__(self, username):
+        this.username = username
+        this.balance = 0.0
 
-@app.route('/home')
-def home():
-  return render_template('home.html',message=request.cookies.get('Token').title())
+db.create_all()
 
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    user = User.query.filter_by(username=username).first()
+    if user is None:
+        user = User(username=username)
+        db.session.add(user)
+        db.session.commit()
+    session['user_id'] = user.id
+    return redirect(url_for('dashboard'))
 
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    return render_template('dashboard.html', user=user)
 
-@app.route('/register',methods = ['POST', 'GET'])  
-def register():
-  if request.method == 'POST':
-      username = request.form['username'].lower()  
-      password = bcrypt.generate_password_hash(request.form['password']) 
-      error=''
-      if username in userData.keys():
-        error='username already exit\n try new username'
-        return render_template('signup.html',error=error)
-      else:
-        userData[username] = password 
-        return redirect('/login')
-  elif request.method == 'GET':
-    return render_template('signup.html')
-         
+@app.route('/add_balance', methods=['POST'])
+def add_balance():
+    user_id = session.get('user_id')
+    amount = request.form.get('amount')
+    
+    if not user_id or not amount:
+        return jsonify({'error': 'Invalid input'}), 400
+    
+    api_key = '0DQNMVQ-GD3MDJ1-Q41F3AQ-RVPYZHV' 
+    payload = {
+        'price_amount': amount,
+        'price_currency': 'usd',
+        'pay_currency': 'btc',
+        'ipn_callback_url': 'https://login.up.railway.app/payment_callback', 
+        'order_id': user_id,
+        'order_description': 'Add Balance'
+    }
 
-@app.route('/login',methods = ['POST','GET'])  
-def login():  
-  if request.method == "POST":  
-    username = request.form['username'].lower()  
-    password = request.form['password']
-    if request.cookies.get('Token') == username:    
-        return redirect('/home')
+    headers = {
+        'x-api-key': api_key,
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.post('https://api.nowpayments.io/v1/invoice', json=payload, headers=headers)
+    data = response.json()
+
+    if response.status_code == 200:
+        return redirect(data['invoice_url'])
     else:
-      print(f"{username} {password} {userData}")
-      if username in userData.keys():
-        print('working')
-        if bcrypt.check_password_hash(userData[username], password) :
-          print('working fine')
-          resp = make_response(redirect('/home'))
-          resp.set_cookie('Token',username)
-          print('working smoothly')
-          return resp
-        else:
-          return render_template('login.html',error="Wrong password")
-      else:
-        return render_template('login.html', error="Username doesn't exist")
-  elif request.method == "GET":
-    return render_template('login.html')
+        return jsonify({'error': 'Payment initiation failed'}), 500
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+@app.route('/payment_callback', methods=['POST'])
+def payment_callback():
+    payment_status = request.json.get('payment_status')
+    user_id = request.json.get('order_id')
+    amount = request.json.get('pay_amount')
+
+    if payment_status == 'confirmed':
+        update_user_balance(user_id, amount)
+        return jsonify({'message': 'Balance updated successfully'}), 200
+    else:
+        return jsonify({'error': 'Payment not confirmed'}), 400
+
+def update_user_balance(user_id, amount):
+    user = User.query.get(user_id)
+    if user:
+        user.balance += float(amount)
+        db.session.commit()
+
+if __name__ == '__main__':
+    app.run(debug=True)

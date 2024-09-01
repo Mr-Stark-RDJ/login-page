@@ -3,23 +3,28 @@ from flask_sqlalchemy import SQLAlchemy
 import requests
 
 app = Flask(__name__)
-app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"
+app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"  # Replace with your actual secret key
 
+# Configuring the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# Define the User model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     balance = db.Column(db.Float, default=0.0)
 
     def __init__(self, username):
-        this.username = username
-        this.balance = 0.0
+        self.username = username
+        self.balance = 0.0
 
-db.create_all()
+# Create database tables within the application context
+with app.app_context():
+    db.create_all()
 
+# Example login route
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form['username']
@@ -31,6 +36,7 @@ def login():
     session['user_id'] = user.id
     return redirect(url_for('dashboard'))
 
+# Dashboard route to display user balance
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -38,6 +44,7 @@ def dashboard():
     user = User.query.get(session['user_id'])
     return render_template('dashboard.html', user=user)
 
+# Route to initiate payment
 @app.route('/add_balance', methods=['POST'])
 def add_balance():
     user_id = session.get('user_id')
@@ -46,12 +53,12 @@ def add_balance():
     if not user_id or not amount:
         return jsonify({'error': 'Invalid input'}), 400
     
-    api_key = '0DQNMVQ-GD3MDJ1-Q41F3AQ-RVPYZHV' 
+    api_key = '0DQNMVQ-GD3MDJ1-Q41F3AQ-RVPYZHV'  # Replace with your actual NOWPayments API key
     payload = {
         'price_amount': amount,
         'price_currency': 'usd',
         'pay_currency': 'btc',
-        'ipn_callback_url': 'https://login.up.railway.app/payment_callback', 
+        'ipn_callback_url': 'https://login.up.railway.app/payment_callback',  # Using your live URL
         'order_id': user_id,
         'order_description': 'Add Balance'
     }

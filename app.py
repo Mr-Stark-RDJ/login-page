@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 import requests
 
 app = Flask(__name__)
-app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"  # Replace with your actual secret key
+app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"
 
 # Configuring the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
@@ -14,27 +14,53 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)  # Adding a password field
     balance = db.Column(db.Float, default=0.0)
 
-    def __init__(self, username):
+    def __init__(self, username, password):
         self.username = username
+        self.password = password
         self.balance = 0.0
 
 # Create database tables within the application context
 with app.app_context():
     db.create_all()
 
-# Example login route
-@app.route('/login', methods=['POST'])
+# Home route
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+# Signup route
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user is None:
+            user = User(username=username, password=password)
+            db.session.add(user)
+            db.session.commit()
+            session['user_id'] = user.id
+            return redirect(url_for('dashboard'))
+        else:
+            return "User already exists! Try logging in."
+    return render_template('signup.html')
+
+# Login route
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    username = request.form['username']
-    user = User.query.filter_by(username=username).first()
-    if user is None:
-        user = User(username=username)
-        db.session.add(user)
-        db.session.commit()
-    session['user_id'] = user.id
-    return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username, password=password).first()
+        if user:
+            session['user_id'] = user.id
+            return redirect(url_for('dashboard'))
+        else:
+            return "Invalid username or password!"
+    return render_template('login.html')
 
 # Dashboard route to display user balance
 @app.route('/dashboard')
@@ -53,7 +79,7 @@ def add_balance():
     if not user_id or not amount:
         return jsonify({'error': 'Invalid input'}), 400
     
-    api_key = '0DQNMVQ-GD3MDJ1-Q41F3AQ-RVPYZHV'  # Replace with your actual NOWPayments API key
+    api_key = 'YOUR_NOWPAYMENTS_API_KEY'  # Replace with your actual NOWPayments API key
     payload = {
         'price_amount': amount,
         'price_currency': 'usd',
@@ -76,6 +102,7 @@ def add_balance():
     else:
         return jsonify({'error': 'Payment initiation failed'}), 500
 
+# Route to handle payment callback
 @app.route('/payment_callback', methods=['POST'])
 def payment_callback():
     payment_status = request.json.get('payment_status')

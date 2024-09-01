@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import requests
+import os
 
 app = Flask(__name__)
 app.secret_key = b"s\x90\xfb\xa9\xf0\xdb\x18\x17\nJH+\xbe\x99K\xbar<\x08\x19uT'\xea"
